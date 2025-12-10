@@ -175,6 +175,7 @@
 		DEADDB392EEA0B5500D418EA /* PlayerCollectionViewController+Actions.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADDB382EEA0B5500D418EA /* PlayerCollectionViewController+Actions.swift */; };
 		DEADDB3B2EEA0B5800D418EA /* PlayerCollectionViewController+PlayerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADDB3A2EEA0B5800D418EA /* PlayerCollectionViewController+PlayerManagement.swift */; };
 		DEADDB3D2EEA0B5B00D418EA /* PlayerCollectionViewController+Overlays.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADDB3C2EEA0B5B00D418EA /* PlayerCollectionViewController+Overlays.swift */; };
+		DEADDB3F2EEA120600D418EA /* SWAP_TO_MAIN_FEATURE.md in Resources */ = {isa = PBXBuildFile; fileRef = DEADDB3E2EEA120600D418EA /* SWAP_TO_MAIN_FEATURE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -364,6 +365,7 @@
 		DEADDB382EEA0B5500D418EA /* PlayerCollectionViewController+Actions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlayerCollectionViewController+Actions.swift"; sourceTree = "<group>"; };
 		DEADDB3A2EEA0B5800D418EA /* PlayerCollectionViewController+PlayerManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlayerCollectionViewController+PlayerManagement.swift"; sourceTree = "<group>"; };
 		DEADDB3C2EEA0B5B00D418EA /* PlayerCollectionViewController+Overlays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlayerCollectionViewController+Overlays.swift"; sourceTree = "<group>"; };
+		DEADDB3E2EEA120600D418EA /* SWAP_TO_MAIN_FEATURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SWAP_TO_MAIN_FEATURE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -813,6 +815,7 @@
 				DEADDB382EEA0B5500D418EA /* PlayerCollectionViewController+Actions.swift */,
 				DEADDB3A2EEA0B5800D418EA /* PlayerCollectionViewController+PlayerManagement.swift */,
 				DEADDB3C2EEA0B5B00D418EA /* PlayerCollectionViewController+Overlays.swift */,
+				DEADDB3E2EEA120600D418EA /* SWAP_TO_MAIN_FEATURE.md */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -947,6 +950,7 @@
 			files = (
 				1B85213025F8C5F900B3356B /* Titillium-RegularUpright.otf in Resources */,
 				1B85212925F8C5F900B3356B /* Titillium-BoldItalic.otf in Resources */,
+				DEADDB3F2EEA120600D418EA /* SWAP_TO_MAIN_FEATURE.md in Resources */,
 				1B85213725F8C5F900B3356B /* Titillium-ThinItalic.otf in Resources */,
 				1B9F8B7B261D0B810020AC55 /* TemplateTableViewCell.xib in Resources */,
 				1B85211425F8C5EB00B3356B /* Formula1-Black.ttf in Resources */,

@@ -185,6 +185,12 @@ extension PlayerCollectionViewController {
             
             self.setPreferredDisplayCriteria(displayCriteria: playerItem.playerAsset?.preferredDisplayCriteria)
             
+            // Mute sidebar/bottom players (all players except the main player at index 0)
+            if index != 0 {
+                playerItem.player?.isMuted = true
+                print("Muting sidebar/bottom player at index \(index)")
+            }
+            
             self.playerItems[index] = playerItem
             
             self.collectionView.reloadItems(at: [IndexPath(item: playerItem.position, section: 0)])

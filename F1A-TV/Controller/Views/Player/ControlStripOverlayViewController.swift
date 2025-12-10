@@ -16,6 +16,7 @@ class ControlStripOverlayViewController: BaseViewController {
     
     var removeChannelButton: UIButton?
     var addChannelButton: UIButton?
+    var swapToMainButton: UIButton?
     var muteChannelButton: UIButton?
     var volumeSlider: TvOSSlider?
     var enterFullScreenButton: UIButton?
@@ -81,6 +82,11 @@ class ControlStripOverlayViewController: BaseViewController {
         
         self.setupRemoveChannelButton()
         self.setupAddChannelButton()
+        
+        // Only show swap to main button for sidebar/bottom players (position != 0)
+        if self.playerItem?.position != 0 {
+            self.setupSwapToMainButton()
+        }
         
         self.setupSpacerView()
         
@@ -196,6 +202,24 @@ class ControlStripOverlayViewController: BaseViewController {
         self.controlsBarView?.addArrangedSubview(self.addChannelButton ?? UIView())
     }
     
+    func setupSwapToMainButton() {
+        self.swapToMainButton = UIButton(type: .custom)
+        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right.fill")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .focused)
+        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .normal)
+        
+        let iconScaleMultiplier = (self.swapToMainButton?.backgroundImage(for: .normal)?.size.height ?? 1)/(self.swapToMainButton?.backgroundImage(for: .normal)?.size.width ?? 1)
+        
+        NSLayoutConstraint.activate([
+            NSLayoutConstraint(item: self.swapToMainButton ?? UIView(), attribute: .height, relatedBy: .equal, toItem: self.swapToMainButton ?? UIView(), attribute: .width, multiplier: iconScaleMultiplier, constant: 0)
+        ])
+        
+        self.swapToMainButton?.layoutIfNeeded()
+        self.swapToMainButton?.subviews.first?.contentMode = .scaleAspectFit
+        
+        self.swapToMainButton?.addTarget(self, action: #selector(self.swapToMainPressed), for: .primaryActionTriggered)
+        self.controlsBarView?.addArrangedSubview(self.swapToMainButton ?? UIView())
+    }
+    
     func setupMuteButton() {
         self.muteChannelButton = UIButton(type: .custom)
         self.updateMuteButtonStatus()
@@ -288,6 +312,11 @@ class ControlStripOverlayViewController: BaseViewController {
     @objc func addChannelPressed() {
         self.swipeDownRegognized()
         self.controlStripActionProtocol?.showChannelSelectorOverlay()
+    }
+    
+    @objc func swapToMainPressed() {
+        self.controlStripActionProtocol?.swapToMainPlayer()
+        self.swipeDownRegognized()
     }
     
     @objc func muteChannelPressed() {

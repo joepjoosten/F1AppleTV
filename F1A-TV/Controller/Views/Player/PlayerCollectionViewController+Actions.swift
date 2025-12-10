@@ -134,11 +134,20 @@ extension PlayerCollectionViewController {
         guard newIndex != 0 else { return } // Already main
         
         if let layout = self.collectionView.collectionViewLayout as? PlayerGridLayout {
+            // Store reference to players before swap
+            let previousMainPlayer = self.playerItems[0].player
+            let newMainPlayer = self.playerItems[newIndex].player
+            
             // Swap the player items in the array
             let temp = self.playerItems[0]
             self.playerItems[0] = self.playerItems[newIndex]
             self.playerItems[newIndex] = temp
             self.orderChannels()
+            
+            // Handle audio: unmute the new main player, mute the previous main player (now in sidebar)
+            newMainPlayer?.isMuted = false
+            previousMainPlayer?.isMuted = true
+            print("Swapped main player: unmuted new main, muted sidebar player")
             
             // Update layout and reload
             layout.mainPlayerIndex = 0  // Main is always at index 0
