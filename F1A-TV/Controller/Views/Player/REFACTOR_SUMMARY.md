@@ -18,15 +18,25 @@ enum PlayerLayoutMode {
 
 ### 3. **New Layout for 2-6 Players**
 ```
-┌─────────────────┬───┐
-│                 │ 1 │  2 players: Main + 1 sidebar
-│                 ├───┤  3 players: Main + 2 sidebar
-│      MAIN       │ 2 │  4 players: Main + 3 sidebar
-│       (0)       ├───┤  5 players: Main + 3 sidebar + 1 bottom
-│                 │ 3 │  6 players: Main + 3 sidebar + 2 bottom
-├─────────────────┼───┤  7+ players: 3x3 grid (or larger)
-│    4    │   5   │   │
-└─────────┴───────┴───┘
+┌─────────────────────────────────────────┌────────────────────┐
+│                                         │                    │
+│                                         │                    │
+│                                         │          2         │      2 players: Main + 1 sidebar
+│                                         │                    │      3 players: Main + 2 sidebar
+│                                         │                    │      4 players: Main + 3 sidebar
+│                    1                    └────────────────────┘      5 players: Main + 3 sidebar + 1 bottom
+│                                         │                    │      6 players: Main + 3 sidebar + 2 bottom
+│                                         │                    │      7+ players: 3x3 grid (or larger)
+│                                         │          3         │
+│                                         │                    │
+│                                         │                    │
+┌─────────────────────┐───────────────────└────────────────────┘
+│                     │                   │                    │
+│                     │                   │                    │
+│         5           │         6         │          4         │
+│                     │                   │                    │
+│                     │                   │                    │
+└─────────────────────┘───────────────────└────────────────────┘
 ```
 
 ### 4. **Simplified Add/Remove Logic**
