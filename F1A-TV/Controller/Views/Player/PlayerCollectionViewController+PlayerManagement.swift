@@ -188,7 +188,8 @@ extension PlayerCollectionViewController {
             // Mute sidebar/bottom players (all players except the main player at index 0)
             if index != 0 {
                 playerItem.player?.isMuted = true
-                print("Muting sidebar/bottom player at index \(index)")
+                playerItem.player?.volume = 0.0
+                print("Muting and silencing sidebar/bottom player at index \(index)")
             }
             
             self.playerItems[index] = playerItem
@@ -240,8 +241,18 @@ extension PlayerCollectionViewController {
             print("Setting preferred caption: " + String(setCaptionResult ?? false))
         }
         
-        playerItem.player?.volume = playerSettings.getPreferredVolume(for: channelType)
-        playerItem.player?.isMuted = playerSettings.getPreferredMute(for: channelType)
+        // Only apply volume/mute preferences for the main player (position 0)
+        // Sidebar/bottom players should remain muted with volume at 0
+        if playerItem.position == 0 {
+            playerItem.player?.volume = playerSettings.getPreferredVolume(for: channelType)
+            playerItem.player?.isMuted = playerSettings.getPreferredMute(for: channelType)
+            print("Applied preferred audio settings for main player: volume=\(playerSettings.getPreferredVolume(for: channelType)), muted=\(playerSettings.getPreferredMute(for: channelType))")
+        } else {
+            // Keep sidebar/bottom players muted and silent
+            playerItem.player?.isMuted = true
+            playerItem.player?.volume = 0.0
+            print("Keeping sidebar/bottom player muted and silent at position \(playerItem.position)")
+        }
     }
 }
 

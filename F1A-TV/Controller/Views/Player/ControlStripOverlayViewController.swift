@@ -204,8 +204,8 @@ class ControlStripOverlayViewController: BaseViewController {
     
     func setupSwapToMainButton() {
         self.swapToMainButton = UIButton(type: .custom)
-        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right.fill")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .focused)
-        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .normal)
+        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.arrow.down.circle.fill")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .focused)
+        self.swapToMainButton?.setBackgroundImage(UIImage(systemName: "arrow.up.arrow.down.circle")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .normal)
         
         let iconScaleMultiplier = (self.swapToMainButton?.backgroundImage(for: .normal)?.size.height ?? 1)/(self.swapToMainButton?.backgroundImage(for: .normal)?.size.width ?? 1)
         
