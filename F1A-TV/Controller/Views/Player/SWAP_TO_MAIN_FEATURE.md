@@ -26,10 +26,8 @@ This document describes the implementation of the "Swap to Main" feature, which 
 **Enhanced:**
 - `swapMainPlayer(to:)` method now handles audio muting/unmuting:
   - Stores references to both players before swap
-  - Captures the previous main player's volume
-  - After swap: unmutes the new main player and restores volume
-  - After swap: mutes the previous main player (now in sidebar) and sets volume to 0
-  - Prevents audio bleed from sidebar players
+  - After swap: unmutes the new main player
+  - After swap: mutes the previous main player (now in sidebar)
   - Adds debug logging for audio changes
 
 **Existing:**
@@ -40,13 +38,7 @@ This document describes the implementation of the "Swap to Main" feature, which 
 - `didLoadStreamEntitlement(playerId:streamEntitlement:)` now auto-mutes non-main players:
   - Checks if player index is not 0 (main player)
   - Sets `player.isMuted = true` for sidebar/bottom players
-  - Sets `player.volume = 0.0` to ensure no audio leaks through
   - Adds debug logging
-
-- `setPreferredChannelSettings(playerItem:)` now respects player position:
-  - Only applies user audio preferences (volume/mute) to main player (position 0)
-  - Forces sidebar/bottom players to remain muted with volume at 0
-  - Prevents audio settings from being restored on sidebar players after they're ready
 
 ## User Experience
 
@@ -67,15 +59,46 @@ This document describes the implementation of the "Swap to Main" feature, which 
 8. Layout updates to reflect new positions
 
 ## Layout Modes
-This feature is most relevant in `mainWithSidebar` mode (2-6 players):
-- 1 player: Single mode (no swap needed)
-- 2-6 players: Main with sidebar/bottom (swap button useful)
-- 7+ players: Grid mode (swap button still works but less intuitive)
+This feature is specifically designed for `mainWithSidebar` mode (2-6 players):
+- **1 player**: Single mode - swap button hidden (no sidebar players exist)
+- **2-6 players**: Main with sidebar/bottom mode - **swap button visible on sidebar/bottom players only**
+- **7+ players**: Grid mode - swap button hidden (all players equal size, no distinct main player)
 
 ## Control Strip Button Order
-1. Remove Channel (X icon)
-2. Add Channel (+ icon)
-3. **Swap to Main (swap arrows icon)** ← NEW
+
+The button order is optimized based on the layout mode and player position, prioritizing the most relevant actions:
+
+### Single Player Mode (playerCount = 1):
+1. **Add Channel** (+ icon) ← Primary action in single player mode
+2. [Spacer]
+3. Rewind
+4. Play/Pause
+5. Forward
+6. [Spacer]
+7. Mute
+8. Volume Slider
+9. Language Selector
+10. [Spacer]
+
+### MainWithSidebar - Sidebar/Bottom Player (playerCount 2-6, position != 0):
+1. **Swap to Main** (↕ icon) ← Primary action for sidebar players
+2. **Fullscreen** (⤢ icon)
+3. **Add Channel** (+ icon)
+4. **Remove Channel** (× icon)
+5. [Spacer]
+6. Rewind
+7. Play/Pause
+8. Forward
+9. [Spacer]
+10. Mute
+11. Volume Slider
+12. Language Selector
+13. [Spacer]
+
+### MainWithSidebar - Main Player (playerCount 2-6, position = 0):
+1. **Fullscreen** (⤢ icon) ← Primary action for main player
+2. **Add Channel** (+ icon)
+3. **Remove Channel** (× icon)
 4. [Spacer]
 5. Rewind
 6. Play/Pause
@@ -85,15 +108,32 @@ This feature is most relevant in `mainWithSidebar` mode (2-6 players):
 10. Volume Slider
 11. Language Selector
 12. [Spacer]
-13. Fullscreen
+
+### Grid Mode (playerCount 7+):
+1. **Fullscreen** (⤢ icon)
+2. **Add Channel** (+ icon)
+3. **Remove Channel** (× icon)
+4. [Spacer]
+5. Rewind
+6. Play/Pause
+7. Forward
+8. [Spacer]
+9. Mute
+10. Volume Slider
+11. Language Selector
+12. [Spacer]
+
+**Design Rationale:**
+- **Single mode**: Add Channel is first since it's the primary action (adding more players)
+- **Sidebar players**: Swap to Main is first since it's the most common action for sidebar players
+- **Main/Grid players**: Fullscreen is first since it's the most common action for main players
 
 ## Technical Notes
 
 ### Audio Muting Strategy:
-- **On Load**: Non-main players (index != 0) are muted and volume set to 0 in `didLoadStreamEntitlement`
-- **On Ready**: `setPreferredChannelSettings` checks player position and only applies user audio preferences to main player (position 0)
-- **On Swap**: Both `isMuted` and `volume` are updated to prevent audio bleed from sidebar players
-- **User Override**: Users can still manually unmute sidebar players via the Control Strip, which will restore their volume
+- **On Load**: Non-main players (index != 0) are muted in `didLoadStreamEntitlement`
+- **On Swap**: Audio state is swapped along with player positions
+- **User Override**: Users can still manually unmute sidebar players via the Control Strip
 
 ### Synchronization:
 - After swapping, all players sync to the new main player's position
@@ -109,22 +149,3 @@ This feature is most relevant in `mainWithSidebar` mode (2-6 players):
 2. Add double-tap gesture as shortcut to swap without opening Control Strip
 3. Consider adding audio ducking instead of full mute for sidebar players
 4. Persist user's audio preferences per channel type
-
-## Troubleshooting
-
-### Issue: Sidebar player audio is still audible
-**Root Cause**: AVPlayer's `isMuted` property alone may not be sufficient on some systems.
-
-**Solution**: The implementation now uses a dual approach:
-1. Sets `isMuted = true` (prevents audio routing)
-2. Sets `volume = 0.0` (ensures no audio output)
-
-This happens in three places:
-- Initial load (`didLoadStreamEntitlement`)
-- When player becomes ready (`setPreferredChannelSettings`)
-- When swapping to sidebar (`swapMainPlayer`)
-
-### Issue: Audio preferences not working for main player
-**Root Cause**: If you swap a player that had its audio manually adjusted, those settings might be lost.
-
-**Solution**: The swap function captures the previous main player's volume and applies it to the new main player, ensuring consistent audio levels.

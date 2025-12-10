@@ -13,6 +13,7 @@ class ControlStripOverlayViewController: BaseViewController {
     
     var controlStripActionProtocol: ControlStripActionProtocol?
     var playerItem: PlayerItem?
+    var playerCount: Int = 1
     
     var removeChannelButton: UIButton?
     var addChannelButton: UIButton?
@@ -31,9 +32,10 @@ class ControlStripOverlayViewController: BaseViewController {
         self.setupViewController()
     }
     
-    func initialize(playerItem: PlayerItem, controlStripActionProtocol: ControlStripActionProtocol) {
+    func initialize(playerItem: PlayerItem, playerCount: Int, controlStripActionProtocol: ControlStripActionProtocol) {
         self.controlStripActionProtocol = controlStripActionProtocol
         self.playerItem = playerItem
+        self.playerCount = playerCount
     }
     
     func setupViewController() {
@@ -80,12 +82,25 @@ class ControlStripOverlayViewController: BaseViewController {
     func addContentToControlsBar() {
         self.controlsBarView?.arrangedSubviews.forEach({$0.removeFromSuperview()})
         
-        self.setupRemoveChannelButton()
-        self.setupAddChannelButton()
+        let layoutMode = PlayerLayoutMode.mode(for: self.playerCount)
         
-        // Only show swap to main button for sidebar/bottom players (position != 0)
-        if self.playerItem?.position != 0 {
+        // Button order depends on layout mode and position
+        if layoutMode == .single {
+            // Single player: Add first (no remove, fullscreen, or swap buttons)
+            self.setupAddChannelButton()
+            
+        } else if layoutMode == .mainWithSidebar && self.playerItem?.position != 0 {
+            // Sidebar/bottom player in mainWithSidebar: Swap, Fullscreen, Add, Remove
             self.setupSwapToMainButton()
+            self.setupFullScreenButton()
+            self.setupAddChannelButton()
+            self.setupRemoveChannelButton()
+            
+        } else {
+            // Main player in mainWithSidebar or any player in grid mode: Fullscreen, Add, Remove
+            self.setupFullScreenButton()
+            self.setupAddChannelButton()
+            self.setupRemoveChannelButton()
         }
         
         self.setupSpacerView()
@@ -99,11 +114,6 @@ class ControlStripOverlayViewController: BaseViewController {
         self.setupMuteButton()
         self.setupVolumeSlider()
         self.setupLanguageSelectorButton()
-//        self.setupCaptionSelectorButton()
-        
-        self.setupSpacerView()
-        
-        self.setupFullScreenButton()
     }
     
     func setupSpacerView() {

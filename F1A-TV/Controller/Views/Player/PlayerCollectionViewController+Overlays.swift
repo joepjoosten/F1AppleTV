@@ -30,7 +30,7 @@ extension PlayerCollectionViewController {
         
         let focusedPlayerItem = self.playerItems[self.lastFocusedPlayer?.item ?? 0]
         
-        self.controlStripViewController?.initialize(playerItem: focusedPlayerItem, controlStripActionProtocol: self)
+        self.controlStripViewController?.initialize(playerItem: focusedPlayerItem, playerCount: self.playerItems.count, controlStripActionProtocol: self)
         
         if(self.controlStripViewController?.isBeingPresented ?? true) {
             return
