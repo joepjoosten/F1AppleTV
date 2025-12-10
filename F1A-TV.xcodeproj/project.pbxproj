@@ -170,6 +170,7 @@
 		1BFB1558280214C4001FB3DA /* FairPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFB1557280214C4001FB3DA /* FairPlayer.swift */; };
 		1BFED8F5262443FA00540511 /* PlayerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFED8F4262443FA00540511 /* PlayerSettings.swift */; };
 		1BFFAB7825F901C600EADC99 /* SeriesType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFFAB7725F901C600EADC99 /* SeriesType.swift */; };
+		DEADDB352EE9FD0700D418EA /* REFACTOR_SUMMARY.md in Resources */ = {isa = PBXBuildFile; fileRef = DEADDB342EE9FD0700D418EA /* REFACTOR_SUMMARY.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -353,6 +354,8 @@
 		1BFB1557280214C4001FB3DA /* FairPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairPlayer.swift; sourceTree = "<group>"; };
 		1BFED8F4262443FA00540511 /* PlayerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSettings.swift; sourceTree = "<group>"; };
 		1BFFAB7725F901C600EADC99 /* SeriesType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesType.swift; sourceTree = "<group>"; };
+		DEADDB332EE9FC2B00D418EA /* PlayerLayoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerLayoutManager.swift; sourceTree = "<group>"; };
+		DEADDB342EE9FD0700D418EA /* REFACTOR_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REFACTOR_SUMMARY.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -549,6 +552,7 @@
 				1BB29B9025445D6C00ECC074 /* F1A-TV */,
 				1BB29B8F25445D6C00ECC074 /* Products */,
 				188309F9CE9671FEA1E5B358 /* Frameworks */,
+				DEADDB332EE9FC2B00D418EA /* PlayerLayoutManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -796,6 +800,7 @@
 				1B4F98D8261C85CE008FCE4A /* PlayerInfoOverlayViewController.swift */,
 				1B9F8B67261C9E000020AC55 /* ChannelSelectorOverlayViewController.swift */,
 				1B7CCA5A261E0AB600FB25C2 /* ControlStripOverlayViewController.swift */,
+				DEADDB342EE9FD0700D418EA /* REFACTOR_SUMMARY.md */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -950,6 +955,7 @@
 				1BDAED3E26122D66003361F8 /* ChannelPlayerCollectionViewCell.xib in Resources */,
 				1B85211625F8C5EB00B3356B /* Formula1-Bold.ttf in Resources */,
 				1B85211525F8C5EB00B3356B /* Formula1-Regular.ttf in Resources */,
+				DEADDB352EE9FD0700D418EA /* REFACTOR_SUMMARY.md in Resources */,
 				1B85211725F8C5EB00B3356B /* Formula1-Wide.ttf in Resources */,
 				1B85213225F8C5F900B3356B /* Titillium-LightUpright.otf in Resources */,
 				1BC656B325F6C7660025CA1D /* NoContentCollectionViewCell.xib in Resources */,

@@ -77,50 +77,25 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
     func loadStreamEntitlement(channelItem: ContentItem) {
         self.orderChannels()
         
+        let oldCount = self.playerItems.count
+        
         let playerItem = PlayerItem(contentItem: channelItem, position: self.playerItems.count)
         self.playerItems.append(playerItem)
+        self.orderChannels()
         
-        let itemCount = self.playerItems.count
+        let newCount = self.playerItems.count
         
-        if itemCount == 1 {
-            // First player - just reload
-            self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
-            
-        } else if itemCount == 2 {
-            // Transitioning from 1 to 2 players - need to resize existing player
-            self.collectionView.collectionViewLayout.invalidateLayout()
-            self.collectionView.performBatchUpdates({
-                self.collectionView.insertItems(at: [IndexPath(item: 1, section: 0)])
-                self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
-            }, completion: nil)
-            
-        } else if itemCount <= 4 {
-            // Adding player within 2-4 range - all small players need resizing
-            self.collectionView.collectionViewLayout.invalidateLayout()
-            self.collectionView.performBatchUpdates({
-                self.collectionView.insertItems(at: [IndexPath(item: playerItem.position, section: 0)])
-                // Reload all small players (indices 1 through itemCount-2) since their heights change
-                let smallPlayerIndices = (1..<itemCount-1).map { IndexPath(item: $0, section: 0) }
-                if !smallPlayerIndices.isEmpty {
-                    self.collectionView.reloadItems(at: smallPlayerIndices)
-                }
-            }, completion: nil)
-            
-        } else if itemCount == 5 {
-            // Transitioning from 4 to 5 players - switching to grid layout
-            // Need to reload all existing items
-            self.collectionView.collectionViewLayout.invalidateLayout()
-            self.collectionView.performBatchUpdates({
-                self.collectionView.insertItems(at: [IndexPath(item: 4, section: 0)])
-                let existingIndices = (0..<4).map { IndexPath(item: $0, section: 0) }
-                self.collectionView.reloadItems(at: existingIndices)
-            }, completion: nil)
-            
-        } else {
-            // Adding more players in grid layout - just insert the new one
-            self.collectionView.collectionViewLayout.invalidateLayout()
-            self.collectionView.insertItems(at: [IndexPath(item: playerItem.position, section: 0)])
-        }
+        // Determine update strategy
+        let strategy = LayoutUpdateStrategy.determine(
+            oldCount: oldCount,
+            newCount: newCount,
+            oldMainIndex: 0,
+            newMainIndex: 0,
+            changedIndex: newCount - 1
+        )
+        
+        // Apply the layout update
+        self.applyLayoutUpdate(strategy: strategy, changedIndex: newCount - 1, isAdding: true)
         
         if let id = channelItem.container.metadata?.contentId {
             if let additionalStream = channelItem.container.metadata?.additionalStreams?.first {
@@ -141,87 +116,6 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
         }
         DataManager.instance.loadStreamEntitlement(contentId: contentUrl, playerId: playerId, streamEntitlementLoadedProtocol: self)
     }
-    
-    /*func didLoadStreamEntitlement(playerId: String, streamEntitlement: StreamEntitlementDto) {
-        if let index = self.playerItems.firstIndex(where: {$0.id == playerId}) {
-            var playerItem = self.playerItems[index]
-            
-            playerItem.entitlement = streamEntitlement
-            
-            //if let url = URL(string: streamEntitlement.url) {
-            DataManager.instance.loadM3U8Data(url: streamEntitlement.url, completion: { m3u8Data in
-                DispatchQueue.main.async {
-                    //print(m3u8Data)
-                    //let baseUrlString = streamEntitlement.url.components(separatedBy: "index.m3u8").first ?? ""
-                    
-                    var m3u8Lines = m3u8Data.components(separatedBy: .newlines)
-                    var lineIndex = 0
-                    while (lineIndex < m3u8Lines.count) {
-                        let currentLine = m3u8Lines[lineIndex]
-                        if(currentLine.starts(with: "#EXT-X-STREAM-INF")) {
-                            if(!currentLine.contains("RESOLUTION=480x270")){
-                                m3u8Lines.remove(at: lineIndex + 1)
-                                m3u8Lines.remove(at: lineIndex)
-                                
-                                continue
-                            }
-                        }
-                        
-                        lineIndex += 1
-                    }
-                    
-                    //let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
-                    //let streamFileUrl = urls[urls.endIndex-1].appendingPathComponent("\(playerItem.id).m3u8")
-                    let m3u8Content = m3u8Lines.joined()
-                    
-                    /*do {
-                        try m3u8Content.write(to: streamFileUrl, atomically: true, encoding: String.Encoding.utf8)
-                    } catch {
-                        print("Couldn't write file")
-                    }*/
-                    
-                    /*if let baseUrl = URL(string: baseUrlString) {
-                     let parser = M3U8Parser()
-                     let params = M3U8Parser.Params(playlist: m3u8Data, playlistType: .master, baseUrl: baseUrl)
-                     
-                     do {
-                     let playlistResult = try parser.parse(params: params, extraParams: nil)
-                     if case let .master(masterPlaylist) = playlistResult {
-                     let streamUrl = masterPlaylist.tags.streamTags.first(where: {$0.resolution == "480x270"})?.uri ?? ""
-                     
-                     if let potatoUrl = URL(string: "\(baseUrlString)\(streamUrl)") {*/
-                    
-                    let m3u8Server = Server()
-                    m3u8Server.route(.GET, playerItem.id, content: {(.ok, m3u8Content)})
-                    do {
-                        try m3u8Server.start(port: 2506)
-                    } catch (let error) {
-                        print("Couldn't start server " + error.localizedDescription)
-                    }
-                    
-                    if let localUrl =  URL(string: "http://localhost:2506/\(playerItem.id)") {
-                        playerItem.playerAsset = AVAsset(url: localUrl)
-                        playerItem.playerItem = AVPlayerItem(asset: playerItem.playerAsset ?? AVAsset())
-                        playerItem.player = AVPlayer(playerItem: playerItem.playerItem)
-                        playerItem.player?.appliesMediaSelectionCriteriaAutomatically = false
-                        
-                        self.setPreferredDisplayCriteria(displayCriteria: playerItem.playerAsset?.preferredDisplayCriteria)
-                    }
-                    /*}
-                     }
-                     } catch {
-                     print("Couldn't parse playlist")
-                     }*/
-                    
-                    /*self.playerItems[index] = playerItem
-                     
-                     self.collectionView.reloadItems(at: [IndexPath(item: playerItem.position, section: 0)])*/
-                    PlayerController.instance.openPlayer(player: playerItem.player ?? AVPlayer())
-                    //}
-                }
-            })
-        }
-    }*/
     
     func didLoadStreamEntitlement(playerId: String, streamEntitlement: StreamEntitlementDto) {
         if let index = self.playerItems.firstIndex(where: {$0.id == playerId}) {
@@ -500,87 +394,75 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
         let playerItem = self.playerItems[removedIndex]
         playerItem.player?.pause()
         
-        let countBeforeRemoval = self.playerItems.count
+        let oldCount = self.playerItems.count
         
         self.playerItems.removeAll(where: {$0.id == playerItem.id})
         self.orderChannels()
         
+        let newCount = self.playerItems.count
+        
+        // Determine update strategy
+        let strategy = LayoutUpdateStrategy.determine(
+            oldCount: oldCount,
+            newCount: newCount,
+            oldMainIndex: 0,
+            newMainIndex: 0,
+            changedIndex: removedIndex
+        )
+        
+        // Apply the layout update
+        self.applyLayoutUpdate(strategy: strategy, changedIndex: removedIndex, isAdding: false)
+    }
+    
+    // MARK: - Layout Update Helper
+    func applyLayoutUpdate(strategy: LayoutUpdateStrategy, changedIndex: Int, isAdding: Bool) {
         self.collectionView.collectionViewLayout.invalidateLayout()
         
-        let remainingCount = self.playerItems.count
+        switch strategy {
+        case .reloadAll:
+            // Complete reload - safest option for mode changes
+            self.collectionView.reloadData()
+            
+        case .simpleInsert(let index):
+            self.collectionView.insertItems(at: [IndexPath(item: index, section: 0)])
+            
+        case .simpleDelete(let index):
+            self.collectionView.deleteItems(at: [IndexPath(item: index, section: 0)])
+            
+        case .reloadMainArea, .reloadSidebarOnly:
+            // For now, just reload all - can optimize later
+            self.collectionView.reloadData()
+        }
+    }
+    
+    // MARK: - Main Player Swapping
+    func swapMainPlayer(to newIndex: Int) {
+        guard newIndex >= 0 && newIndex < self.playerItems.count else { return }
+        guard newIndex != 0 else { return } // Already main
         
-        if remainingCount == 0 {
-            // No players left - show empty state
-            self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
+        if let layout = self.collectionView.collectionViewLayout as? PlayerGridLayout {
+            // Swap the player items in the array
+            let temp = self.playerItems[0]
+            self.playerItems[0] = self.playerItems[newIndex]
+            self.playerItems[newIndex] = temp
+            self.orderChannels()
             
-        } else if remainingCount == 1 {
-            // Going from 2 to 1 player - reload remaining player to make it full screen
-            if removedIndex == 0 {
-                // Removed index 0, so reload what was index 1 (now index 0)
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: 0, section: 0)])
-                    self.collectionView.reloadItems(at: [IndexPath(item: 1, section: 0)])
-                }, completion: nil)
-            } else {
-                // Removed index 1, so reload index 0
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: 1, section: 0)])
-                    self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
-                }, completion: nil)
+            // Update layout and reload
+            layout.mainPlayerIndex = 0  // Main is always at index 0
+            self.collectionView.collectionViewLayout.invalidateLayout()
+            self.collectionView.reloadData()
+            
+            // Sync all players after swap
+            if let mainPlayerItem = self.playerItems.first {
+                self.syncAllPlayers(with: mainPlayerItem)
             }
-            
-        } else if countBeforeRemoval >= 2 && countBeforeRemoval <= 4 {
-            // Within 2-4 player range
-            if removedIndex == 0 {
-                // Removed the main player - reload all remaining items (they all shifted down)
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: 0, section: 0)])
-                    let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
-                    self.collectionView.reloadItems(at: reloadIndices)
-                }, completion: nil)
-            } else {
-                // Removed a small player (not index 0)
-                // All small players need to be reloaded because their heights change
-                // AND items after the removed index shift up
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
-                    // Reload all small players that existed before deletion (excluding removed one)
-                    // AND items that come after the removed index (they shift up)
-                    var reloadIndices: [IndexPath] = []
-                    for i in 1..<countBeforeRemoval {
-                        if i != removedIndex {
-                            reloadIndices.append(IndexPath(item: i, section: 0))
-                        }
-                    }
-                    if !reloadIndices.isEmpty {
-                        self.collectionView.reloadItems(at: reloadIndices)
-                    }
-                }, completion: nil)
-            }
-            
-        } else if remainingCount == 4 && countBeforeRemoval == 5 {
-            // Going from 5 to 4 players - switching from grid to main+small layout
-            self.collectionView.performBatchUpdates({
-                self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
-                let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
-                self.collectionView.reloadItems(at: reloadIndices)
-            }, completion: nil)
-            
-        } else {
-            // More than 4 players - staying in grid layout
-            if removedIndex == 0 {
-                // Removed index 0 - reload all since positions shift
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
-                    let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
-                    self.collectionView.reloadItems(at: reloadIndices)
-                }, completion: nil)
-            } else {
-                // Just delete the removed item
-                self.collectionView.performBatchUpdates({
-                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
-                }, completion: nil)
-            }
+        }
+    }
+    
+    func swapToMainPlayer() {
+        // Swap the currently focused player to main position
+        if let focusedIndex = self.lastFocusedPlayer?.item {
+            self.swapMainPlayer(to: focusedIndex)
         }
     }
     
@@ -764,94 +646,205 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
     }
 }
 
+// MARK: - Layout Manager Types
+
+enum PlayerLayoutMode {
+    case single           // 1 player
+    case mainWithSidebar  // 2-6 players
+    case grid             // 7+ players
+    
+    static func mode(for playerCount: Int) -> PlayerLayoutMode {
+        switch playerCount {
+        case 0, 1:
+            return .single
+        case 2...6:
+            return .mainWithSidebar
+        default:
+            return .grid
+        }
+    }
+}
+
+struct PlayerLayoutConfiguration {
+    // Layout constants
+    static let mainToSidebarRatio: CGFloat = 0.666  // Main player takes 2/3 width
+    static let mainToBottomRatio: CGFloat = 0.666    // Main player takes 2/3 height when bottom row exists
+    
+    let playerCount: Int
+    let mainPlayerIndex: Int
+    let bounds: CGRect
+    
+    var mode: PlayerLayoutMode {
+        return PlayerLayoutMode.mode(for: playerCount)
+    }
+    
+    init(playerCount: Int, mainPlayerIndex: Int = 0, bounds: CGRect) {
+        self.playerCount = playerCount
+        self.mainPlayerIndex = mainPlayerIndex
+        self.bounds = bounds
+    }
+    
+    func frame(for index: Int) -> CGRect {
+        switch mode {
+        case .single:
+            return bounds
+            
+        case .mainWithSidebar:
+            return frameMainWithSidebar(for: index)
+            
+        case .grid:
+            return frameGrid(for: index)
+        }
+    }
+    
+    private func frameMainWithSidebar(for index: Int) -> CGRect {
+        let mainWidth = floor(bounds.width * Self.mainToSidebarRatio)
+        let sidebarWidth = bounds.width - mainWidth
+        
+        let sidebarCount = min(playerCount - 1, 3)
+        let bottomCount = max(0, playerCount - 4)
+        
+        if index == mainPlayerIndex {
+            let mainHeight = bottomCount > 0 ? bounds.height * Self.mainToBottomRatio : bounds.height
+            return CGRect(x: 0, y: 0, width: mainWidth, height: mainHeight)
+        }
+        
+        let adjustedIndex = index > mainPlayerIndex ? index - 1 : index
+        
+        if adjustedIndex < sidebarCount {
+            let sidebarHeight = bounds.height / CGFloat(sidebarCount)
+            let y = sidebarHeight * CGFloat(adjustedIndex)
+            return CGRect(x: mainWidth, y: y, width: sidebarWidth, height: sidebarHeight)
+        } else {
+            let bottomIndex = adjustedIndex - sidebarCount
+            let bottomY = bounds.height * Self.mainToBottomRatio
+            let bottomHeight = bounds.height * (1.0 - Self.mainToBottomRatio)
+            let bottomWidth = mainWidth / CGFloat(bottomCount)
+            let x = bottomWidth * CGFloat(bottomIndex)
+            return CGRect(x: x, y: bottomY, width: bottomWidth, height: bottomHeight)
+        }
+    }
+    
+    private func frameGrid(for index: Int) -> CGRect {
+        let gridSize = ceil(sqrt(CGFloat(playerCount)))
+        let itemWidth = bounds.width / gridSize
+        let itemHeight = itemWidth / 16 * 9
+        
+        let row = floor(CGFloat(index) / gridSize)
+        let col = CGFloat(index).truncatingRemainder(dividingBy: gridSize)
+        
+        return CGRect(
+            x: itemWidth * col,
+            y: itemHeight * row,
+            width: itemWidth,
+            height: itemHeight
+        )
+    }
+    
+    var contentSize: CGSize {
+        switch mode {
+        case .single, .mainWithSidebar:
+            return bounds.size
+            
+        case .grid:
+            let gridSize = ceil(sqrt(CGFloat(playerCount)))
+            let itemWidth = bounds.width / gridSize
+            let itemHeight = itemWidth / 16 * 9
+            let rows = ceil(CGFloat(playerCount) / gridSize)
+            return CGSize(width: bounds.width, height: rows * itemHeight)
+        }
+    }
+}
+
+enum LayoutUpdateStrategy {
+    case reloadAll
+    case reloadMainArea
+    case reloadSidebarOnly
+    case simpleInsert(at: Int)
+    case simpleDelete(at: Int)
+    
+    static func determine(
+        oldCount: Int,
+        newCount: Int,
+        oldMainIndex: Int,
+        newMainIndex: Int,
+        changedIndex: Int
+    ) -> LayoutUpdateStrategy {
+        
+        let oldMode = PlayerLayoutMode.mode(for: oldCount)
+        let newMode = PlayerLayoutMode.mode(for: newCount)
+        
+        if oldMode != newMode {
+            return .reloadAll
+        }
+        
+        if oldMainIndex != newMainIndex {
+            return .reloadAll
+        }
+        
+        if newMode == .grid && changedIndex != 0 {
+            return newCount > oldCount ? .simpleInsert(at: changedIndex) : .simpleDelete(at: changedIndex)
+        }
+        
+        if newMode == .mainWithSidebar {
+            return .reloadAll
+        }
+        
+        return .reloadAll
+    }
+}
+
+class PlayerLayoutManager {
+    private(set) var configuration: PlayerLayoutConfiguration
+    
+    init(configuration: PlayerLayoutConfiguration) {
+        self.configuration = configuration
+    }
+    
+    func layoutAttributes(for indexPath: IndexPath) -> UICollectionViewLayoutAttributes {
+        let attributes = UICollectionViewLayoutAttributes(forCellWith: indexPath)
+        attributes.frame = configuration.frame(for: indexPath.item)
+        return attributes
+    }
+    
+    func allLayoutAttributes() -> [UICollectionViewLayoutAttributes] {
+        return (0..<configuration.playerCount).map { index in
+            layoutAttributes(for: IndexPath(item: index, section: 0))
+        }
+    }
+}
+
 // MARK: - Custom Collection View Layout
 class PlayerGridLayout: UICollectionViewLayout {
-    private var cachedAttributes = [UICollectionViewLayoutAttributes]()
-    private var contentSize: CGSize = .zero
+    private var layoutManager: PlayerLayoutManager?
+    var mainPlayerIndex: Int = 0
     
     override func prepare() {
         super.prepare()
         
         guard let collectionView = collectionView else { return }
         
-        cachedAttributes.removeAll()
-        
         let itemCount = collectionView.numberOfItems(inSection: 0)
         
-        guard itemCount > 0 else { return }
+        let config = PlayerLayoutConfiguration(
+            playerCount: itemCount,
+            mainPlayerIndex: mainPlayerIndex,
+            bounds: collectionView.bounds
+        )
         
-        let bounds = collectionView.bounds
-        let padding: CGFloat = 0
-        
-        if itemCount == 1 {
-            // Single full-screen item
-            let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
-            attributes.frame = bounds
-            cachedAttributes.append(attributes)
-            contentSize = bounds.size
-            
-        } else if itemCount <= 4 {
-            // Main player + small players layout
-            let mainWidth = floor(bounds.width * 0.666 - padding)
-            let mainHeight = bounds.height
-            
-            let smallWidth = bounds.width - mainWidth
-            let smallHeight = bounds.height / CGFloat(itemCount - 1)
-            
-            // Main player (index 0)
-            let mainAttributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
-            mainAttributes.frame = CGRect(x: 0, y: 0, width: mainWidth, height: mainHeight)
-            cachedAttributes.append(mainAttributes)
-            
-            // Small players (remaining indices)
-            for i in 1..<itemCount {
-                let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
-                let yPosition = smallHeight * CGFloat(i - 1)
-                let xPosition = mainWidth
-                attributes.frame = CGRect(x: xPosition, y: yPosition, width: smallWidth, height: smallHeight)
-                cachedAttributes.append(attributes)
-            }
-            
-            contentSize = bounds.size
-            
-        } else {
-            // Grid layout for many players
-            let gridSize = CGFloat(itemCount).squareRoot().rounded(.up)
-            let itemWidth = bounds.width / gridSize
-            let itemHeight = itemWidth / 16 * 9
-            
-            for i in 0..<itemCount {
-                let row = floor(CGFloat(i) / gridSize)
-                let col = CGFloat(i).truncatingRemainder(dividingBy: gridSize)
-                
-                let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
-                attributes.frame = CGRect(
-                    x: itemWidth * col,
-                    y: itemHeight * row,
-                    width: itemWidth,
-                    height: itemHeight
-                )
-                cachedAttributes.append(attributes)
-            }
-            
-            let rows = ceil(CGFloat(itemCount) / gridSize)
-            contentSize = CGSize(
-                width: bounds.width,
-                height: rows * itemHeight
-            )
-        }
+        layoutManager = PlayerLayoutManager(configuration: config)
     }
     
     override var collectionViewContentSize: CGSize {
-        return contentSize
+        return layoutManager?.configuration.contentSize ?? .zero
     }
     
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-        return cachedAttributes.filter { $0.frame.intersects(rect) }
+        return layoutManager?.allLayoutAttributes().filter { $0.frame.intersects(rect) }
     }
     
     override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
-        return cachedAttributes.first { $0.indexPath == indexPath }
+        return layoutManager?.layoutAttributes(for: indexPath)
     }
     
     override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
