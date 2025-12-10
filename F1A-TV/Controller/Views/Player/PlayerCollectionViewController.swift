@@ -31,8 +31,9 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
     func setupCollectionView() {
         self.collectionView.backgroundColor = .black
         
-        // Set up custom compositional layout for main + small players
-        self.collectionView.collectionViewLayout = createCustomLayout()
+        // Use custom layout for main + small players arrangement
+        let customLayout = PlayerGridLayout()
+        self.collectionView.collectionViewLayout = customLayout
         
         let playPauseGesture = UITapGestureRecognizer(target: self, action: #selector(self.playPausePressed))
         playPauseGesture.allowedPressTypes = [NSNumber(value: UIPress.PressType.playPause.rawValue)]
@@ -57,119 +58,11 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
         let swipeLeftRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeLeftRegognized))
         swipeLeftRecognizer.direction = .left
         self.collectionView.addGestureRecognizer(swipeLeftRecognizer)
-    }
-    
-    func createCustomLayout() -> UICollectionViewLayout {
-        let layout = UICollectionViewCompositionalLayout { [weak self] (sectionIndex, environment) -> NSCollectionLayoutSection? in
-            guard let self = self else { return nil }
-            
-            let itemCount = self.playerItems.count
-            
-            if itemCount == 0 {
-                // Empty state - single full item
-                let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let item = NSCollectionLayoutItem(layoutSize: itemSize)
-                
-                let groupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-                
-                let section = NSCollectionLayoutSection(group: group)
-                return section
-                
-            } else if itemCount == 1 {
-                // Single full-screen player
-                let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let item = NSCollectionLayoutItem(layoutSize: itemSize)
-                item.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
-                
-                let groupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-                
-                let section = NSCollectionLayoutSection(group: group)
-                return section
-                
-            } else if itemCount <= 4 {
-                // Main player on left (70%), up to 3 small players on right (30%)
-                
-                // Main player (left side, full height)
-                let mainItemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(0.70),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let mainItem = NSCollectionLayoutItem(layoutSize: mainItemSize)
-                mainItem.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 4)
-                
-                // Small player (right side, stacked vertically)
-                let smallItemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0 / CGFloat(itemCount - 1))
-                )
-                let smallItem = NSCollectionLayoutItem(layoutSize: smallItemSize)
-                smallItem.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 8)
-                
-                // Right column group (contains small items)
-                let rightColumnSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(0.30),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let rightColumnGroup = NSCollectionLayoutGroup.vertical(
-                    layoutSize: rightColumnSize,
-                    subitem: smallItem,
-                    count: itemCount - 1
-                )
-                
-                // Main horizontal group combining main item and right column
-                let mainGroupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalHeight(1.0)
-                )
-                let mainGroup = NSCollectionLayoutGroup.horizontal(
-                    layoutSize: mainGroupSize,
-                    subitems: [mainItem, rightColumnGroup]
-                )
-                
-                let section = NSCollectionLayoutSection(group: mainGroup)
-                return section
-                
-            } else {
-                // Fall back to grid layout for more than 4 players
-                let gridSize = CGFloat(itemCount).squareRoot().rounded(.up)
-                
-                let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0 / gridSize),
-                    heightDimension: .fractionalWidth((1.0 / gridSize) * (9.0 / 16.0))
-                )
-                let item = NSCollectionLayoutItem(layoutSize: itemSize)
-                item.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
-                
-                let groupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .fractionalWidth((1.0 / gridSize) * (9.0 / 16.0))
-                )
-                let group = NSCollectionLayoutGroup.horizontal(
-                    layoutSize: groupSize,
-                    subitem: item,
-                    count: Int(gridSize)
-                )
-                
-                let section = NSCollectionLayoutSection(group: group)
-                return section
-            }
-        }
         
-        return layout
+        // Add select button (long press) gesture to show channel selector (useful in simulator)
+        let selectLongPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.selectLongPressed))
+        selectLongPressGesture.allowedPressTypes = [NSNumber(value: UIPress.PressType.select.rawValue)]
+        self.collectionView.addGestureRecognizer(selectLongPressGesture)
     }
     
     func initialize(channelItems: [ContentItem], playFromStart: Bool? = false) {
@@ -187,12 +80,45 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
         let playerItem = PlayerItem(contentItem: channelItem, position: self.playerItems.count)
         self.playerItems.append(playerItem)
         
-        // Invalidate layout when adding players
-        self.collectionView.collectionViewLayout.invalidateLayout()
+        let itemCount = self.playerItems.count
         
-        if(self.playerItems.count == 1) {
+        if itemCount == 1 {
+            // First player - just reload
             self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
-        }else{
+            
+        } else if itemCount == 2 {
+            // Transitioning from 1 to 2 players - need to resize existing player
+            self.collectionView.collectionViewLayout.invalidateLayout()
+            self.collectionView.performBatchUpdates({
+                self.collectionView.insertItems(at: [IndexPath(item: 1, section: 0)])
+                self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
+            }, completion: nil)
+            
+        } else if itemCount <= 4 {
+            // Adding player within 2-4 range - all small players need resizing
+            self.collectionView.collectionViewLayout.invalidateLayout()
+            self.collectionView.performBatchUpdates({
+                self.collectionView.insertItems(at: [IndexPath(item: playerItem.position, section: 0)])
+                // Reload all small players (indices 1 through itemCount-2) since their heights change
+                let smallPlayerIndices = (1..<itemCount-1).map { IndexPath(item: $0, section: 0) }
+                if !smallPlayerIndices.isEmpty {
+                    self.collectionView.reloadItems(at: smallPlayerIndices)
+                }
+            }, completion: nil)
+            
+        } else if itemCount == 5 {
+            // Transitioning from 4 to 5 players - switching to grid layout
+            // Need to reload all existing items
+            self.collectionView.collectionViewLayout.invalidateLayout()
+            self.collectionView.performBatchUpdates({
+                self.collectionView.insertItems(at: [IndexPath(item: 4, section: 0)])
+                let existingIndices = (0..<4).map { IndexPath(item: $0, section: 0) }
+                self.collectionView.reloadItems(at: existingIndices)
+            }, completion: nil)
+            
+        } else {
+            // Adding more players in grid layout - just insert the new one
+            self.collectionView.collectionViewLayout.invalidateLayout()
             self.collectionView.insertItems(at: [IndexPath(item: playerItem.position, section: 0)])
         }
         
@@ -543,6 +469,12 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
         self.showChannelSelectorOverlay()
     }
     
+    @objc func selectLongPressed(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began {
+            self.showChannelSelectorOverlay()
+        }
+    }
+    
     func showChannelSelectorOverlay() {
         if(self.channelSelectorViewController == nil) {
             self.channelSelectorViewController = self.getViewControllerWith(viewIdentifier: ConstantsUtil.channelSelectorOverlayViewController) as? ChannelSelectorOverlayViewController
@@ -564,19 +496,91 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
             return
         }
         
-        let playerItem = self.playerItems[self.lastFocusedPlayer?.item ?? 0]
+        let removedIndex = self.lastFocusedPlayer?.item ?? 0
+        let playerItem = self.playerItems[removedIndex]
         playerItem.player?.pause()
+        
+        let countBeforeRemoval = self.playerItems.count
         
         self.playerItems.removeAll(where: {$0.id == playerItem.id})
         self.orderChannels()
         
-        // Invalidate layout when removing players
         self.collectionView.collectionViewLayout.invalidateLayout()
         
-        if(self.playerItems.isEmpty) {
-            self.collectionView.reloadItems(at: [self.lastFocusedPlayer ?? IndexPath()])
-        }else{
-            self.collectionView.deleteItems(at: [self.lastFocusedPlayer ?? IndexPath()])
+        let remainingCount = self.playerItems.count
+        
+        if remainingCount == 0 {
+            // No players left - show empty state
+            self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
+            
+        } else if remainingCount == 1 {
+            // Going from 2 to 1 player - reload remaining player to make it full screen
+            if removedIndex == 0 {
+                // Removed index 0, so reload what was index 1 (now index 0)
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: 0, section: 0)])
+                    self.collectionView.reloadItems(at: [IndexPath(item: 1, section: 0)])
+                }, completion: nil)
+            } else {
+                // Removed index 1, so reload index 0
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: 1, section: 0)])
+                    self.collectionView.reloadItems(at: [IndexPath(item: 0, section: 0)])
+                }, completion: nil)
+            }
+            
+        } else if countBeforeRemoval >= 2 && countBeforeRemoval <= 4 {
+            // Within 2-4 player range
+            if removedIndex == 0 {
+                // Removed the main player - reload all remaining items (they all shifted down)
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: 0, section: 0)])
+                    let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.reloadItems(at: reloadIndices)
+                }, completion: nil)
+            } else {
+                // Removed a small player (not index 0)
+                // All small players need to be reloaded because their heights change
+                // AND items after the removed index shift up
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
+                    // Reload all small players that existed before deletion (excluding removed one)
+                    // AND items that come after the removed index (they shift up)
+                    var reloadIndices: [IndexPath] = []
+                    for i in 1..<countBeforeRemoval {
+                        if i != removedIndex {
+                            reloadIndices.append(IndexPath(item: i, section: 0))
+                        }
+                    }
+                    if !reloadIndices.isEmpty {
+                        self.collectionView.reloadItems(at: reloadIndices)
+                    }
+                }, completion: nil)
+            }
+            
+        } else if remainingCount == 4 && countBeforeRemoval == 5 {
+            // Going from 5 to 4 players - switching from grid to main+small layout
+            self.collectionView.performBatchUpdates({
+                self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
+                let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
+                self.collectionView.reloadItems(at: reloadIndices)
+            }, completion: nil)
+            
+        } else {
+            // More than 4 players - staying in grid layout
+            if removedIndex == 0 {
+                // Removed index 0 - reload all since positions shift
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
+                    let reloadIndices = (0..<remainingCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.reloadItems(at: reloadIndices)
+                }, completion: nil)
+            } else {
+                // Just delete the removed item
+                self.collectionView.performBatchUpdates({
+                    self.collectionView.deleteItems(at: [IndexPath(item: removedIndex, section: 0)])
+                }, completion: nil)
+            }
         }
     }
     
@@ -757,5 +761,100 @@ class PlayerCollectionViewController: BaseCollectionViewController, StreamEntitl
     
     func didReportPlayTime() {
         print("Successfully reported current play time")
+    }
+}
+
+// MARK: - Custom Collection View Layout
+class PlayerGridLayout: UICollectionViewLayout {
+    private var cachedAttributes = [UICollectionViewLayoutAttributes]()
+    private var contentSize: CGSize = .zero
+    
+    override func prepare() {
+        super.prepare()
+        
+        guard let collectionView = collectionView else { return }
+        
+        cachedAttributes.removeAll()
+        
+        let itemCount = collectionView.numberOfItems(inSection: 0)
+        
+        guard itemCount > 0 else { return }
+        
+        let bounds = collectionView.bounds
+        let padding: CGFloat = 0
+        
+        if itemCount == 1 {
+            // Single full-screen item
+            let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
+            attributes.frame = bounds
+            cachedAttributes.append(attributes)
+            contentSize = bounds.size
+            
+        } else if itemCount <= 4 {
+            // Main player + small players layout
+            let mainWidth = floor(bounds.width * 0.666 - padding)
+            let mainHeight = bounds.height
+            
+            let smallWidth = bounds.width - mainWidth
+            let smallHeight = bounds.height / CGFloat(itemCount - 1)
+            
+            // Main player (index 0)
+            let mainAttributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
+            mainAttributes.frame = CGRect(x: 0, y: 0, width: mainWidth, height: mainHeight)
+            cachedAttributes.append(mainAttributes)
+            
+            // Small players (remaining indices)
+            for i in 1..<itemCount {
+                let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
+                let yPosition = smallHeight * CGFloat(i - 1)
+                let xPosition = mainWidth
+                attributes.frame = CGRect(x: xPosition, y: yPosition, width: smallWidth, height: smallHeight)
+                cachedAttributes.append(attributes)
+            }
+            
+            contentSize = bounds.size
+            
+        } else {
+            // Grid layout for many players
+            let gridSize = CGFloat(itemCount).squareRoot().rounded(.up)
+            let itemWidth = bounds.width / gridSize
+            let itemHeight = itemWidth / 16 * 9
+            
+            for i in 0..<itemCount {
+                let row = floor(CGFloat(i) / gridSize)
+                let col = CGFloat(i).truncatingRemainder(dividingBy: gridSize)
+                
+                let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
+                attributes.frame = CGRect(
+                    x: itemWidth * col,
+                    y: itemHeight * row,
+                    width: itemWidth,
+                    height: itemHeight
+                )
+                cachedAttributes.append(attributes)
+            }
+            
+            let rows = ceil(CGFloat(itemCount) / gridSize)
+            contentSize = CGSize(
+                width: bounds.width,
+                height: rows * itemHeight
+            )
+        }
+    }
+    
+    override var collectionViewContentSize: CGSize {
+        return contentSize
+    }
+    
+    override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+        return cachedAttributes.filter { $0.frame.intersects(rect) }
+    }
+    
+    override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+        return cachedAttributes.first { $0.indexPath == indexPath }
+    }
+    
+    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
+        return true
     }
 }
